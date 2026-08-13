@@ -84,6 +84,20 @@ function showMainMenu(ctx) {
 async function showNextProfile(ctx) {
   const userId = ctx.from.id;
 
+  // --- ПРОВЕРКА ПОДПИСКИ ---
+  const isSubscribed = await checkSubscription(ctx);
+  if (!isSubscribed) {
+    return ctx.reply(
+      '⚠️ Чтобы смотреть анкеты, подпишись на наш официальный канал!\n\n' +
+      'После подписки нажми кнопку снова 👇',
+      Markup.inlineKeyboard([
+        [Markup.button.url('📢 Подписаться на канал', 'https://t.me/love_bot_channel')]
+      ])
+    );
+  }
+  // --------------------------
+
+  // дальше идёт твой код показа анкеты с ИИ-подкатом...
   const candidate = await dbGet(`
     SELECT * FROM users 
     WHERE id != ? AND photo IS NOT NULL AND id NOT IN (
@@ -126,6 +140,18 @@ bot.start(async (ctx) => {
 
   ctx.reply(`Привет, ${ctx.from.first_name}! 💕 Добро пожаловать в Love-Bot!\n\nДавай создадим твою анкету. Как тебя зовут?`);
 });
+
+// Функция проверки подписки на канал
+async function checkSubscription(ctx) {
+  try {
+    const member = await ctx.telegram.getChatMember('@love_bot_channel', ctx.from.id);
+    const allowedStatuses = ['creator', 'administrator', 'member'];
+    return allowedStatuses.includes(member.status);
+  } catch (err) {
+    console.error('Ошибка проверки подписки:', err);
+    return true; // В случае ошибки пропускаем, чтобы бот не ломался
+  }
+}
 
 // ==================== 👑 АДМИН-КОМАНДА ====================
 bot.command('admin', async (ctx) => {
